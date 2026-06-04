@@ -81,10 +81,12 @@ echo ""
 echo "=== Starting agentmemory container ==="
 
 # Mount .env file if it exists (for LLM/embedding provider keys)
+# agentmemory reads from ~/.agentmemory/.env — inside the container
+# the node user's home is /home/node
 ENV_FILE="$HOME/.agentmemory/.env"
 ENV_MOUNT=""
 if [ -f "$ENV_FILE" ]; then
-    ENV_MOUNT="-v ${ENV_FILE}:/opt/agentmemory/.env:ro"
+    ENV_MOUNT="-v ${ENV_FILE}:/home/node/.agentmemory/.env:ro"
     echo "  Mounting .env from: $ENV_FILE"
 fi
 
@@ -95,7 +97,7 @@ $ENGINE run -d \
     -p "127.0.0.1:${VIEWER_PORT}:3113" \
     -v "${DATA_VOLUME}:/data" \
     -v "${SECRETS_VOLUME}:/secrets" \
-    $ENV_MOUNT \
+    "$ENV_MOUNT" \
     "$IMAGE_NAME"
 
 echo ""

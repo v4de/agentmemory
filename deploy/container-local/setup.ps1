@@ -78,10 +78,12 @@ if ($existing) {
 Write-Host "`n=== Starting agentmemory container ===" -ForegroundColor Cyan
 
 # Mount .env file if it exists (for LLM/embedding provider keys)
+# agentmemory reads from ~/.agentmemory/.env — inside the container
+# the node user's home is /home/node
 $EnvFile = Join-Path $env:USERPROFILE ".agentmemory\.env"
 $EnvMount = @()
 if (Test-Path $EnvFile) {
-    $EnvMount = @("-v", "${EnvFile}:/opt/agentmemory/.env:ro")
+    $EnvMount = @("-v", "${EnvFile}:/home/node/.agentmemory/.env:ro")
     Write-Host "  Mounting .env from: $EnvFile" -ForegroundColor Gray
 }
 
