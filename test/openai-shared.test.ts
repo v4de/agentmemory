@@ -5,6 +5,7 @@ import {
   buildEmbeddingUrl,
   detectAzure,
   normalizeBaseUrl,
+  resolveRoutingMode,
 } from "../src/providers/_openai-shared.js";
 import { OpenAIEmbeddingProvider } from "../src/providers/embedding/openai.js";
 
@@ -300,5 +301,51 @@ describe("OpenAIEmbeddingProvider — Azure auto-detection (#371)", () => {
     expect(capturedUrl).toBe("https://api.openai.com/v1/embeddings");
     expect(capturedHeaders.get("Authorization")).toBe("Bearer sk-test");
     expect(capturedHeaders.get("api-key")).toBeNull();
+  });
+});
+
+describe("resolveRoutingMode", () => {
+  let stderrSpy: ReturnType<typeof vi.spyOn>;
+
+  beforeEach(() => {
+    stderrSpy = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
+  });
+
+  afterEach(() => {
+    stderrSpy.mockRestore();
+  });
+
+  it("returns 'cost' for COST (uppercase) on Azure", () => {
+    expect(resolveRoutingMode("COST", true)).toBe("cost");
+  });
+
+  it("returns 'balanced' for Balanced (mixed case) on Azure", () => {
+    expect(resolveRoutingMode("Balanced", true)).toBe("balanced");
+  });
+
+  it("returns 'quality' for QUALITY (uppercase) on Azure", () => {
+    expect(resolveRoutingMode("QUALITY", true)).toBe("quality");
+  });
+
+  it("returns undefined and logs warning for invalid value on Azure", () => {
+    expect(resolveRoutingMode("fastest", true)).toBeUndefined();
+    expect(stderrSpy).toHaveBeenCalledOnce();
+    const msg = stderrSpy.mock.calls[0]![0] as string;
+    expect(msg).toContain("Unrecognized MODEL_ROUTER_ROUTING_MODE");
+    expect(msg).toContain("fastest");
+    expect(msg).toContain("cost, balanced, quality");
+  });
+
+  it("returns undefined when envValue is undefined", () => {
+    expect(resolveRoutingMode(undefined, true)).toBeUndefined();
+    expect(stderrSpy).not.toHaveBeenCalled();
+  });
+
+  it("returns undefined when isAzure is false regardless of envValue", () => {
+    expect(resolveRoutingMode("cost", false)).toBeUndefined();
+    expect(resolveRoutingMode("balanced", false)).toBeUndefined();
+    expect(resolveRoutingMode("quality", false)).toBeUndefined();
+    expect(resolveRoutingMode("invalid", false)).toBeUndefined();
+    expect(stderrSpy).not.toHaveBeenCalled();
   });
 });
