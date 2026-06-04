@@ -94,9 +94,24 @@ if [ ! -s "$HMAC_FILE" ]; then
 fi
 
 AGENTMEMORY_SECRET="$(cat "$HMAC_FILE")"
-export AGENTMEMORY_SECRET
+export AGENTMEMORY_SECRET="$AGENTMEMORY_SECRET"
 
 # Enable all 53 tools server-side so the MCP shim exposes the full set
 export AGENTMEMORY_TOOLS="${AGENTMEMORY_TOOLS:-all}"
+echo "[agentmemory] Tools $AGENTMEMORY_TOOLS."
 
-exec gosu "$RUN_AS" agentmemory "$@"
+
+# Bind the viewer to 0.0.0.0 inside the container so the port mapping works.
+# Requires AGENTMEMORY_SECRET (set above) and VIEWER_ALLOWED_HOSTS.
+export AGENTMEMORY_VIEWER_HOST="${AGENTMEMORY_VIEWER_HOST:-0.0.0.0}"
+echo "[agentmemory] Viewer Host $AGENTMEMORY_VIEWER_HOST."
+
+export VIEWER_ALLOWED_HOSTS="${VIEWER_ALLOWED_HOSTS:-localhost:3113,127.0.0.1:3113}"
+echo "[agentmemory] Viewer Host $VIEWER_ALLOWED_HOSTS."
+
+exec gosu "$RUN_AS" env \
+  AGENTMEMORY_SECRET="$AGENTMEMORY_SECRET" \
+  AGENTMEMORY_TOOLS="${AGENTMEMORY_TOOLS}" \
+  AGENTMEMORY_VIEWER_HOST="${AGENTMEMORY_VIEWER_HOST}" \
+  VIEWER_ALLOWED_HOSTS="${VIEWER_ALLOWED_HOSTS}" \
+  agentmemory "$@"

@@ -1,14 +1,16 @@
 # Lightweight MCP shim image for the gateway to spawn as a stdio backend.
 # Pre-installs @agentmemory/mcp so there's no npx cold-start delay.
-# Reads AGENTMEMORY_SECRET from /run/secrets/hmac if mounted (preferred),
+# Reads AGENTMEMORY_SECRET from /run/secrets/.hmac if mounted (preferred),
 # or falls back to the AGENTMEMORY_SECRET env var.
-FROM node:22-slim
+FROM node:24-slim
 
-RUN npm install -g @agentmemory/mcp --no-fund --no-audit \
- && npm cache clean --force
+# Corporate/Zscaler CA for npm registry access during build
+COPY certificates/Zscaler_Root_CA.crt /usr/local/share/ca-certificates/Zscaler_Root_CA.crt
+RUN mkdir -p /etc/ssl/certs \
+  && cat /usr/local/share/ca-certificates/Zscaler_Root_CA.crt >> /etc/ssl/certs/ca-certificates.crt \
+  && npm install -g @agentmemory/mcp --no-fund --no-audit \
+  && npm cache clean --force
 
 COPY --chmod=0755 shim-entrypoint.sh /usr/local/bin/shim-entrypoint.sh
 
-# The shim reads AGENTMEMORY_URL from env at runtime.
-# AGENTMEMORY_SECRET is loaded from /run/secrets/hmac or env.
 ENTRYPOINT ["shim-entrypoint.sh"]
