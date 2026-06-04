@@ -76,6 +76,15 @@ if ($existing) {
 }
 
 Write-Host "`n=== Starting agentmemory container ===" -ForegroundColor Cyan
+
+# Mount .env file if it exists (for LLM/embedding provider keys)
+$EnvFile = Join-Path $env:USERPROFILE ".agentmemory\.env"
+$EnvMount = @()
+if (Test-Path $EnvFile) {
+    $EnvMount = @("-v", "${EnvFile}:/opt/agentmemory/.env:ro")
+    Write-Host "  Mounting .env from: $EnvFile" -ForegroundColor Gray
+}
+
 & $Engine run -d `
     --name $ContainerName `
     --restart unless-stopped `
@@ -83,6 +92,7 @@ Write-Host "`n=== Starting agentmemory container ===" -ForegroundColor Cyan
     -p "127.0.0.1:${ViewerPort}:3113" `
     -v "${DataVolume}:/data" `
     -v "${SecretsVolume}:/secrets" `
+    @EnvMount `
     $ImageName
 
 Write-Host "`n=== Waiting for startup ===" -ForegroundColor Cyan
