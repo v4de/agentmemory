@@ -56,7 +56,7 @@ function detectProvider(env: Record<string, string>): ProviderConfig {
   if (hasRealValue(env["OPENAI_API_KEY"]) && env["OPENAI_API_KEY_FOR_LLM"] !== "false") {
     return {
       provider: "openai",
-      model: env["OPENAI_MODEL"] || "gpt-4o-mini",
+      model: env["OPENAI_MODEL"] || "gpt-4.1-mini",
       maxTokens,
       baseURL: env["OPENAI_BASE_URL"],
     };

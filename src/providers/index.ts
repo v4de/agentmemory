@@ -35,7 +35,7 @@ function requireEnvVar(key: string): string {
 function defaultModelFor(providerType: ProviderConfig["provider"]): string {
   switch (providerType) {
     case "openai":
-      return getEnvVar("OPENAI_MODEL") || "gpt-4o-mini";
+      return getEnvVar("OPENAI_MODEL") || "gpt-4.1-mini";
     case "anthropic":
       return getEnvVar("ANTHROPIC_MODEL") || "claude-sonnet-4-20250514";
     case "gemini":
