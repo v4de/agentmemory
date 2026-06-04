@@ -7,6 +7,7 @@ import {
   buildChatUrl,
   detectAzure,
   normalizeBaseUrl,
+  resolveRoutingMode,
 } from "./_openai-shared.js";
 
 const DEFAULT_MODEL = "gpt-4o-mini";
@@ -54,6 +55,7 @@ export class OpenAIProvider implements MemoryProvider {
   private timeoutMs: number;
   private isAzure: boolean;
   private azureApiVersion: string;
+  private routingMode: "cost" | "balanced" | "quality" | undefined;
 
   constructor(apiKey: string, model: string, maxTokens: number, baseURL?: string) {
     this.apiKey = apiKey;
@@ -65,6 +67,10 @@ export class OpenAIProvider implements MemoryProvider {
     this.azureApiVersion =
       getEnvVar("OPENAI_API_VERSION") || DEFAULT_AZURE_API_VERSION;
     this.isAzure = detectAzure(this.baseUrl);
+    this.routingMode = resolveRoutingMode(
+      process.env.MODEL_ROUTER_ROUTING_MODE,
+      this.isAzure,
+    );
   }
 
   async compress(systemPrompt: string, userPrompt: string): Promise<string> {
@@ -94,6 +100,9 @@ export class OpenAIProvider implements MemoryProvider {
     };
     if (this.reasoningEffort) {
       body.reasoning_effort = this.reasoningEffort;
+    }
+    if (this.isAzure && this.routingMode) {
+      body.model_router_mode = this.routingMode;
     }
 
     // Bound the request via the shared fetchWithTimeout helper, which
@@ -128,11 +137,43 @@ export class OpenAIProvider implements MemoryProvider {
       throw new Error(`OpenAI API error (${response.status}): ${text}`);
     }
 
-    const data = (await response.json()) as {
+    // Read body as text first, then parse — allows surfacing useful error
+    // messages when the body is malformed (e.g. proxy returning HTML or
+    // streaming text/event-stream instead of JSON).
+    const rawText = await response.text();
+    let data: {
       choices?: Array<{
         message?: { content?: string; reasoning?: string; reasoning_content?: string };
       }>;
+      model?: string;
+      response_successful?: boolean;
+      model_router_response_received?: boolean;
     };
+    try {
+      data = JSON.parse(rawText);
+    } catch {
+      throw new Error(
+        `Malformed response: ${response.status} ${rawText.slice(0, 200)}`,
+      );
+    }
+
+    // Model Router response flag parsing: if either flag is explicitly false,
+    // the response indicates a routing/serving failure despite HTTP 200.
+    if (
+      data.response_successful === false ||
+      data.model_router_response_received === false
+    ) {
+      throw new Error(
+        `Model Router response failure: ${response.status} ${rawText.slice(0, 200)}`,
+      );
+    }
+
+    if (data.model) {
+      process.stderr.write(
+        `[agentmemory] LLM response: requested=${this.model} actual=${data.model}\n`,
+      );
+    }
+
     const message = data.choices?.[0]?.message;
     const content = message?.content;
     if (content) {
@@ -179,4 +220,3 @@ function parsePositiveInt(raw: string | null | undefined): number | undefined {
   const n = Number(trimmed);
   return Number.isFinite(n) && n > 0 ? n : undefined;
 }
-

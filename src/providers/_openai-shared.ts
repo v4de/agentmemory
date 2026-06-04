@@ -161,6 +161,23 @@ export function buildAuthHeaders(
   };
 }
 
+export function resolveRoutingMode(
+  envValue: string | undefined,
+  isAzure: boolean,
+): "cost" | "balanced" | "quality" | undefined {
+  if (!envValue || !isAzure) return undefined;
+  const normalized = envValue.trim().toLowerCase();
+  const valid = ["cost", "balanced", "quality"] as const;
+  if (valid.includes(normalized as any)) {
+    return normalized as "cost" | "balanced" | "quality";
+  }
+  process.stderr.write(
+    `[agentmemory] Unrecognized MODEL_ROUTER_ROUTING_MODE="${envValue}". ` +
+      `Valid values: cost, balanced, quality. Omitting routing mode.\n`,
+  );
+  return undefined;
+}
+
 export function normalizeBaseUrl(raw: string | undefined): string {
   return (raw || DEFAULT_OPENAI_BASE_URL).replace(/\/+$/, "");
 }
