@@ -89,7 +89,7 @@ Write-Host "`n=== Waiting for startup ===" -ForegroundColor Cyan
 $health = $null
 for ($i = 0; $i -lt 15; $i++) {
     try {
-        $health = Invoke-RestMethod -Uri "http://localhost:${RestPort}/agentmemory/health" -TimeoutSec 3
+        $health = Invoke-RestMethod -Uri "http://localhost:${RestPort}/agentmemory/livez" -TimeoutSec 3
         break
     } catch {
         Start-Sleep -Seconds 4
@@ -229,6 +229,6 @@ NOTE: The secret lives only in the '$SecretsVolume' volume.
 "@ -ForegroundColor Gray
 
 Write-Host "`n=== To verify ===" -ForegroundColor Cyan
-Write-Host "  curl http://localhost:${RestPort}/agentmemory/health"
+Write-Host "  curl http://localhost:${RestPort}/agentmemory/livez"
 Write-Host "  $Engine logs $ContainerName"
 Write-Host ""

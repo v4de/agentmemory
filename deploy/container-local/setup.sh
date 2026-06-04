@@ -92,7 +92,7 @@ echo ""
 echo "=== Waiting for startup ==="
 healthy=false
 for i in $(seq 1 15); do
-    if curl -sf --max-time 3 "http://localhost:${REST_PORT}/agentmemory/health" >/dev/null 2>&1; then
+    if curl -sf --max-time 3 "http://localhost:${REST_PORT}/agentmemory/livez" >/dev/null 2>&1; then
         healthy=true
         break
     fi
@@ -246,6 +246,6 @@ echo "      To rotate: $ENGINE volume rm $SECRETS_VOLUME && re-run this script."
 
 echo ""
 echo "=== To verify ==="
-echo "  curl http://localhost:${REST_PORT}/agentmemory/health"
+echo "  curl http://localhost:${REST_PORT}/agentmemory/livez"
 echo "  $ENGINE logs $CONTAINER_NAME"
 echo ""
