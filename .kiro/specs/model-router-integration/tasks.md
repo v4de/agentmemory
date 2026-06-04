@@ -73,14 +73,14 @@ This plan implements Azure AI Foundry Model Router integration across two codeba
     - Write to process.stderr
     - _Requirements: 5.1, 5.2_
 
-  - [ ]* 4.6 Write unit tests for `resolveRoutingMode` in `test/openai-shared.test.ts`
+  - [x] 4.6 Write unit tests for `resolveRoutingMode` in `test/openai-shared.test.ts`
     - Test valid values in various casings (COST, Balanced, QUALITY)
     - Test invalid value returns undefined and triggers stderr warning
     - Test undefined envValue returns undefined
     - Test non-Azure (isAzure=false) returns undefined regardless of envValue
     - _Requirements: 3.1, 3.2, 3.3, 3.4_
 
-  - [ ]* 4.7 Write unit tests for OpenAIProvider response flag parsing and malformed JSON handling
+  - [x] 4.7 Write unit tests for OpenAIProvider response flag parsing and malformed JSON handling
     - Test: 200 response with `response_successful: false` → throws error, records failure
     - Test: 200 response with `model_router_response_received: false` → throws error, records failure
     - Test: 200 response with valid JSON and both flags truthy → success path
@@ -88,7 +88,7 @@ This plan implements Azure AI Foundry Model Router integration across two codeba
     - Test: error body longer than 200 chars is truncated
     - _Requirements: 2.5, 5.4_
 
-  - [ ]* 4.8 Write unit tests for OpenAIProvider routing mode injection and observability logging
+  - [x] 4.8 Write unit tests for OpenAIProvider routing mode injection and observability logging
     - Test model_router_mode appears in body when Azure + routing mode set
     - Test model_router_mode absent when non-Azure or routing mode unset
     - Test stderr log includes requested and actual model names on success
@@ -97,62 +97,62 @@ This plan implements Azure AI Foundry Model Router integration across two codeba
 - [x] 5. Checkpoint - Verify agentmemory builds and existing tests pass
   - Run `npm run build` and `npm test` in the agentmemory workspace. Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 6. Property-based tests for TypeScript components
-  - [ ]* 6.1 Write property test for Azure detection auth headers (Property 1)
+- [x] 6. Property-based tests for TypeScript components
+  - [x] 6.1 Write property test for Azure detection auth headers (Property 1)
     - **Property 1: Azure detection produces correct auth headers**
     - Generator: random hostnames ending/not-ending with `.openai.azure.com`
     - Assert: Azure hosts → `api-key` header; non-Azure → `Authorization: Bearer` header
     - **Validates: Requirements 2.1**
 
-  - [ ]* 6.2 Write property test for Azure v1 URL construction (Property 2)
+  - [x] 6.2 Write property test for Azure v1 URL construction (Property 2)
     - **Property 2: Azure v1 URL construction**
     - Generator: random Azure base URLs without `/openai/deployments/` path segment
     - Assert: produced URL has path `/openai/v1/chat/completions`
     - **Validates: Requirements 2.2**
 
-  - [ ]* 6.3 Write property test for model name passthrough (Property 3)
+  - [x] 6.3 Write property test for model name passthrough (Property 3)
     - **Property 3: Model name passthrough in request body**
     - Generator: random non-empty strings as model names
     - Assert: request body `model` field equals the input string exactly
     - **Validates: Requirements 2.3**
 
-  - [ ]* 6.4 Write property test for routing mode conditional injection (Property 4)
+  - [x] 6.4 Write property test for routing mode conditional injection (Property 4)
     - **Property 4: Routing mode conditional injection**
     - Generator: random valid modes × (Azure/non-Azure URLs), random casings
     - Assert: Azure + valid mode → `model_router_mode` present (lowercased); non-Azure or unset → field absent
     - **Validates: Requirements 2.4, 3.1, 3.2, 3.3**
 
-  - [ ]* 6.5 Write property test for invalid routing mode fallback (Property 5)
+  - [x] 6.5 Write property test for invalid routing mode fallback (Property 5)
     - **Property 5: Invalid routing mode fallback**
     - Generator: random strings excluding "cost", "balanced", "quality" (case-insensitive)
     - Assert: `resolveRoutingMode` returns undefined for all invalid inputs
     - **Validates: Requirements 3.4**
 
-  - [ ]* 6.6 Write property test for embedding path isolation (Property 6)
+  - [x] 6.6 Write property test for embedding path isolation (Property 6)
     - **Property 6: Embedding path isolation from Model Router**
     - Generator: random (OPENAI_EMBEDDING_BASE_URL, OPENAI_BASE_URL) pairs where they differ
     - Assert: embedding provider resolves from OPENAI_EMBEDDING_BASE_URL, never OPENAI_BASE_URL
     - **Validates: Requirements 4.1, 4.3, 4.4**
 
-  - [ ]* 6.7 Write property test for embedding dimension guard (Property 7)
+  - [x] 6.7 Write property test for embedding dimension guard (Property 7)
     - **Property 7: Embedding dimension guard**
     - Generator: random Float32Arrays with lengths ≠ configured dimensions (1536)
     - Assert: dimension guard throws error containing expected and actual dimension counts
     - **Validates: Requirements 4.5**
 
-  - [ ]* 6.8 Write property test for circuit breaker state transitions (Property 8)
+  - [x] 6.8 Write property test for circuit breaker state transitions (Property 8)
     - **Property 8: Circuit breaker state transitions**
     - Generator: random sequences of success/failure calls with timestamps within/outside 60s window
     - Assert: ≥3 failures in 60s → open state; 30s recovery → half-open allows trial
     - **Validates: Requirements 2.6**
 
-  - [ ]* 6.9 Write property test for error response body truncation (Property 9)
+  - [x] 6.9 Write property test for error response body truncation (Property 9)
     - **Property 9: Error response handling with body truncation**
     - Generator: random non-2xx status codes × random strings of varying length (0–1000 chars); also generate 200 responses with `response_successful: false` and varying body lengths
     - Assert: error message contains status code AND body truncated to ≤200 characters; malformed JSON responses also produce truncated error messages
     - **Validates: Requirements 2.5, 5.4**
 
-  - [ ]* 6.10 Write property test for success response model logging (Property 10)
+  - [x] 6.10 Write property test for success response model logging (Property 10)
     - **Property 10: Success response model logging**
     - Generator: random (requested model name, response model name) string pairs
     - Assert: stderr log line includes both the requested and actual model names
