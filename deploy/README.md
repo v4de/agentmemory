@@ -65,15 +65,15 @@ following to your platform's environment variables (Fly:
 `flyctl secrets set`; Railway / Render / Coolify: dashboard
 *Variables / Environment* tab):
 
-| Variable                  | Purpose                                                  |
-|---------------------------|----------------------------------------------------------|
-| `ANTHROPIC_API_KEY`       | LLM-backed compression + summarization                   |
-| `GEMINI_API_KEY`          | LLM provider alternative                                 |
-| `OPENROUTER_API_KEY`      | LLM provider alternative                                 |
-| `OPENAI_API_KEY`          | Embedding provider (text-embedding-3-small by default)   |
-| `VOYAGE_API_KEY`          | Embedding provider alternative                           |
-| `AGENTMEMORY_AUTO_COMPRESS=true` | Run LLM compression on every observation batch    |
-| `AGENTMEMORY_INJECT_CONTEXT=true` | Inject recalled memories back into agent prompts |
+| Variable                          | Purpose                                                  |
+|-----------------------------------|----------------------------------------------------------|
+| `ANTHROPIC_API_KEY`               | LLM-backed compression + summarization                   |
+| `GEMINI_API_KEY`                  | LLM provider alternative                                 |
+| `OPENROUTER_API_KEY`              | LLM provider alternative                                 |
+| `OPENAI_API_KEY`                  | Embedding provider (text-embedding-3-small by default)   |
+| `VOYAGE_API_KEY`                  | Embedding provider alternative                           |
+| `AGENTMEMORY_AUTO_COMPRESS=true`  | Run LLM compression on every observation batch           |
+| `AGENTMEMORY_INJECT_CONTEXT=true` | Inject recalled memories back into agent prompts         |
 
 The defaults are intentionally conservative: provider keys default to
 absent (no third-party calls), `AGENTMEMORY_AUTO_COMPRESS` is off,
@@ -84,7 +84,7 @@ confirmed your provider quota can absorb the workload.
 
 Measured against fly.io's `iad` region with a 1 GB volume:
 
-```
+```table
 machine image prepared :  5.1 s
 volume mount + format  :  2.5 s
 firecracker boot       :  1.0 s
