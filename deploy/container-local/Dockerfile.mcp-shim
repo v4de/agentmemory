@@ -4,10 +4,12 @@
 # or falls back to the AGENTMEMORY_SECRET env var.
 FROM node:24-slim
 
-# Corporate/Zscaler CA for npm registry access during build
-COPY certificates/Zscaler_Root_CA.crt /usr/local/share/ca-certificates/Zscaler_Root_CA.crt
-RUN mkdir -p /etc/ssl/certs \
-  && cat /usr/local/share/ca-certificates/Zscaler_Root_CA.crt >> /etc/ssl/certs/ca-certificates.crt \
+# Custom CA certificates (e.g. corporate proxy) — injected before npm so HTTPS repos are trusted
+COPY certificates/*.crt /usr/local/share/ca-certificates/
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends ca-certificates \
+  && update-ca-certificates \
+  && rm -rf /var/lib/apt/lists/* \
   && npm install -g @agentmemory/mcp --no-fund --no-audit \
   && npm cache clean --force
 

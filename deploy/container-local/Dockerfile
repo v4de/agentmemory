@@ -4,16 +4,14 @@ FROM iiidev/iii:${III_VERSION} AS iii-image
 
 FROM node:24-slim
 
-ARG AGENTMEMORY_VERSION=0.9.24
+ARG AGENTMEMORY_VERSION=0.9.26
 ARG III_VERSION=0.11.2
 ARG III_SDK_VERSION=0.11.2
 
-# Corporate/Zscaler CA — injected before apt so HTTPS repos are trusted
-COPY certificates/Zscaler_Root_CA.crt /usr/local/share/ca-certificates/Zscaler_Root_CA.crt
-RUN mkdir -p /etc/ssl/certs \
-  && cat /usr/local/share/ca-certificates/Zscaler_Root_CA.crt >> /etc/ssl/certs/ca-certificates.crt \
-  && apt-get update \
-  && apt-get install -y --no-install-recommends openssl ca-certificates tini gosu curl \
+# Custom CA certificates (e.g. corporate proxy) — injected before apt so HTTPS repos are trusted
+COPY certificates/*.crt /usr/local/share/ca-certificates/
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends openssl ca-certificates tini curl \
   && update-ca-certificates \
   && rm -rf /var/lib/apt/lists/*
 
@@ -27,10 +25,21 @@ RUN printf '{"name":"agentmemory-deploy","version":"1.0.0","private":true,"overr
   && npm install @xenova/transformers --no-fund --no-audit \
   && ln -s /opt/agentmemory/node_modules/.bin/agentmemory /usr/local/bin/agentmemory
 
+# Copy the deploy-tuned iii config (binds 0.0.0.0, absolute /data paths)
+COPY iii-config.yaml /opt/agentmemory/node_modules/@agentmemory/agentmemory/dist/iii-config.yaml
+
+# Create runtime directories and set ownership to node user
+RUN mkdir -p /data /secrets \
+  && chown -R node:node /data /secrets \
+  && chown node:node /opt/agentmemory/node_modules/@agentmemory/agentmemory/dist/iii-config.yaml
+
 ENV AGENTMEMORY_III_VERSION=${III_VERSION} \
     TINI_SUBREAPER=1
 
 COPY --chmod=0755 entrypoint.sh /usr/local/bin/agentmemory-entrypoint.sh
+
+# Switch to unprivileged user for runtime
+USER node
 
 EXPOSE 3111 3113
 

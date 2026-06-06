@@ -1,87 +1,20 @@
 #!/bin/sh
 # agentmemory local Podman entrypoint.
 #
-# Runs as root so it can:
-#   1. Overwrite the npm-bundled iii-config.yaml with a deploy-tuned
-#      version that binds 0.0.0.0 and uses absolute /data paths.
-#   2. chown the Podman-mounted /data volume to the runtime user.
-#   3. Generate the HMAC secret on first boot and persist it to
-#      /data/.hmac (chmod 600) so the secret survives restarts.
+# Runs as the unprivileged `node` user (switched via USER in Dockerfile).
+# Directory creation, config injection, ownership, and static env vars
+# are handled at build time in the Dockerfile.
 #
-# Then execs the agentmemory CLI as the unprivileged `node` user.
+# This script:
+#   1. Generates the HMAC secret on first boot and persists it to
+#      /secrets/.hmac so the secret survives restarts.
+#   2. Exports AGENTMEMORY_SECRET (must be runtime since it reads from volume).
+#   3. Execs the agentmemory CLI.
 
 set -eu
 
-DATA_DIR="${AGENTMEMORY_DATA_DIR:-/data}"
 SECRETS_DIR="${AGENTMEMORY_SECRETS_DIR:-/secrets}"
 HMAC_FILE="${SECRETS_DIR}/.hmac"
-RUN_AS="node:node"
-III_CONFIG="/opt/agentmemory/node_modules/@agentmemory/agentmemory/dist/iii-config.yaml"
-
-mkdir -p "$DATA_DIR" "$SECRETS_DIR"
-chown -R "$RUN_AS" "$DATA_DIR"
-chown -R "$RUN_AS" "$SECRETS_DIR"
-
-# Write deploy-tuned iii config: binds 0.0.0.0, absolute /data paths
-cat > "$III_CONFIG" <<'EOF'
-workers:
-  - name: iii-http
-    config:
-      port: 3111
-      host: 0.0.0.0
-      default_timeout: 180000
-      cors:
-        allowed_origins:
-          - "http://localhost:3111"
-          - "http://localhost:3113"
-          - "http://127.0.0.1:3111"
-          - "http://127.0.0.1:3113"
-        allowed_methods: [GET, POST, PUT, DELETE, OPTIONS]
-  - name: iii-state
-    config:
-      adapter:
-        name: kv
-        config:
-          store_method: file_based
-          file_path: /data/state_store.db
-  - name: iii-queue
-    config:
-      adapter:
-        name: builtin
-  - name: iii-pubsub
-    config:
-      adapter:
-        name: local
-  - name: iii-cron
-    config:
-      adapter:
-        name: kv
-  - name: iii-stream
-    config:
-      port: 3112
-      host: 0.0.0.0
-      adapter:
-        name: kv
-        config:
-          store_method: file_based
-          file_path: /data/stream_store
-  - name: iii-observability
-    config:
-      enabled: true
-      service_name: agentmemory
-      exporter: memory
-      sampling_ratio: 0.1
-      metrics_enabled: true
-      logs_enabled: true
-      logs_console_output: false
-  - name: iii-exec
-    config:
-      watch:
-        - src/**/*.ts
-      exec:
-        - node dist/index.mjs
-EOF
-chown "$RUN_AS" "$III_CONFIG"
 
 # Generate HMAC secret on first boot, persist to secrets volume
 if [ ! -s "$HMAC_FILE" ]; then
@@ -89,29 +22,19 @@ if [ ! -s "$HMAC_FILE" ]; then
   umask 077
   printf '%s\n' "$SECRET" > "$HMAC_FILE"
   chmod 600 "$HMAC_FILE"
-  chown "$RUN_AS" "$HMAC_FILE"
   echo "[agentmemory] HMAC secret generated and stored in secrets volume."
 fi
 
 AGENTMEMORY_SECRET="$(cat "$HMAC_FILE")"
-export AGENTMEMORY_SECRET="$AGENTMEMORY_SECRET"
+export AGENTMEMORY_SECRET
 
-# Enable all 53 tools server-side so the MCP shim exposes the full set
+# Enable all tools server-side so the MCP shim exposes the full set
 export AGENTMEMORY_TOOLS="${AGENTMEMORY_TOOLS:-all}"
-echo "[agentmemory] Tools $AGENTMEMORY_TOOLS."
 
-
-# Bind the viewer to 0.0.0.0 inside the container so the port mapping works.
-# Requires AGENTMEMORY_SECRET (set above) and VIEWER_ALLOWED_HOSTS.
+# Bind the viewer to 0.0.0.0 inside the container so the port mapping works
 export AGENTMEMORY_VIEWER_HOST="${AGENTMEMORY_VIEWER_HOST:-0.0.0.0}"
-echo "[agentmemory] Viewer Host $AGENTMEMORY_VIEWER_HOST."
 
+# Trusted Host headers for the viewer's DNS-rebinding defence
 export VIEWER_ALLOWED_HOSTS="${VIEWER_ALLOWED_HOSTS:-localhost:3113,127.0.0.1:3113}"
-echo "[agentmemory] Viewer Host $VIEWER_ALLOWED_HOSTS."
 
-exec gosu "$RUN_AS" env \
-  AGENTMEMORY_SECRET="$AGENTMEMORY_SECRET" \
-  AGENTMEMORY_TOOLS="${AGENTMEMORY_TOOLS}" \
-  AGENTMEMORY_VIEWER_HOST="${AGENTMEMORY_VIEWER_HOST}" \
-  VIEWER_ALLOWED_HOSTS="${VIEWER_ALLOWED_HOSTS}" \
-  agentmemory "$@"
+exec agentmemory "$@"
